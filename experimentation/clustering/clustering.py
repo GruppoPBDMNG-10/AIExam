@@ -2,7 +2,7 @@ import numpy as np
 import geopy.distance
 from scipy.cluster.vq import kmeans2
 import json
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, MiniBatchKMeans
 import matplotlib.pyplot as plt
 from scipy.spatial import distance
 
@@ -64,7 +64,8 @@ def make_clustering(coordinates, clusters=int, iter=int):
 
 
 def make_clustering_2(coordinates, clusters=int):
-    kmeans_model = KMeans(n_clusters=clusters, random_state=1).fit(coordinates);
+    #kmeans_model = KMeans(n_clusters=clusters, random_state=1).fit(coordinates);
+    kmeans_model = MiniBatchKMeans(n_clusters=clusters, random_state=1, init_size=3*clusters).fit(coordinates);
 
     # These are our fitted labels for clusters -- the first cluster has label 0, and the second has label 1.
     labels = kmeans_model.labels_;
