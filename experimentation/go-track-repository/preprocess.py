@@ -1,4 +1,3 @@
-import common as common
 import pandas as pd
 
 import experimentation.clustering.clustering as clustering
@@ -12,17 +11,30 @@ result_coordinates = result_folder + 'coordinates.csv';
 chunksize = 100000;
 dist = 0;
 coordinates = [];
+print_header = True;
+write_mode = 'w';
 
-for df in pd.read_csv(file, chunksize=chunksize, iterator=True, dtype={'latitude':float, 'longitude':float}):
+for df in pd.read_csv(file, chunksize=chunksize, iterator=True, dtype={'latitude': float, 'longitude': float}, parse_dates=['time'], infer_datetime_format=True):
+    #Convert datetime to unix timestamp
+    df['time'] = df['time'].apply(lambda x: common.datetime_to_unix(x))
+
     #Get coordinates as touple
     for latitude, longitude in zip(df['latitude'], df['longitude']):
         coordinates.append((latitude, longitude))
+
+    df.to_csv(result_csv, mode=write_mode, header=print_header, index=False);
+
+    # Print CSV header only the first time
+    print_header = False;
+
+    # Change write mode to append. In this way, if the file already exists, it is rewrited only the first time.
+    write_mode = 'a';
 
 dist = common.calculate_distance_array(coordinates)/len(coordinates);
 print("Dataset lenght: ", len(coordinates))
 print("Dataset average distance: ", dist);
 
 print("Start clustering process");
-clusterResult = clustering.make_clustering_2(coordinates, 500);
+#clusterResult = clustering.make_clustering_2(coordinates, 500);
 
-print("Cluster result: ", clusterResult)
+

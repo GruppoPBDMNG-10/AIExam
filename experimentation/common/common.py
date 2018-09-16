@@ -1,5 +1,7 @@
 import geopy.distance
 import json
+import datetime
+import time
 
 
 def calculate_distance(first, second):
@@ -21,3 +23,8 @@ def to_json_file(file_path=str, json_data=str):
     """It writes json data to the required file path"""
     with open(file_path, 'w') as outfile:
         yield json.dump(json_data, outfile);
+
+
+def datetime_to_unix(date=datetime.datetime):
+    """It converts a datetime object in unix timestamp"""
+    return int(time.mktime(date.timetuple()))
