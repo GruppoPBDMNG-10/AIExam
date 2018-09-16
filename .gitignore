@@ -105,3 +105,4 @@ venv.bak/
 
 .idea/
 experimentation/taxi-repository/dataset/**
+experimentation/taxi-repository/result/**
