@@ -70,10 +70,14 @@ coordinates_df.to_csv(result_coordinates, mode='w', header=False, index=False);
 dist = common.calculate_distance_array(coordinates)/len(coordinates);
 print("Dataset average distance: ", dist);
 
+
+
 print("Start clustering process");
 clusterResult = clustering.make_clustering_2(coordinates, 500);
 
+print("Cluster completed")
 #TODO: non funziona, capire come mai
+#print(clusterResult);
 #print("Saving cluster to file");
 #common.to_json_file(result_folder+'cluster.json', clusterResult.__repr__());
 
