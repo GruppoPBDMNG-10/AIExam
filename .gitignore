@@ -107,5 +107,5 @@ venv.bak/
 experimentation/taxi-repository/dataset/**
 experimentation/taxi-repository/result/**
 
-experimentation/ngism/dataset/**
-experimentation/ngism/result/**
+experimentation/ngsim/dataset/**
+experimentation/ngsim/result/**
