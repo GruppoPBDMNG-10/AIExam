@@ -57,9 +57,8 @@ for df in pd.read_csv(result_csv, chunksize=chunksize, iterator=True, dtype={'la
 
     df['gate'] = gates
 
-    df = df.drop(['latitude', 'longitude'], axis=1)
-
-    df = df.drop_duplicates(['track_id','gate'])
+    df.drop(['latitude', 'longitude'], axis=1, inplace=True)
+    df.drop_duplicates(['track_id','gate'], inplace=True)
 
     df.to_csv(result_csv, mode=write_mode, header=print_header, index=False)
 

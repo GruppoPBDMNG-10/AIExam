@@ -1,12 +1,9 @@
 import re
 import pandas as pd
-import itertools
-from common import common
-from clustering import clustering
-import geopy.distance
 import numpy as np
-from sqlalchemy import create_engine
-from sklearn.externals import joblib
+import itertools
+import experimentation.clustering.clustering as clustering
+import experimentation.common.common as common
 
 
 def polyline_to_coordinates(polyline, regex):
@@ -23,6 +20,27 @@ def polyline_to_coordinates(polyline, regex):
 def drop_columns(data_frame=pd.DataFrame, columns_name=list):
     """Drop specified columns from the required data frame"""
     return data_frame.drop(columns_name, axis=1)
+
+
+def explode(df, cols, split_on=',') -> pd.DataFrame:
+    """
+    Explode dataframe on the given column, split on given delimeter
+    """
+    cols_sep = list(set(df.columns) - set(cols))
+    df_cols = df[cols_sep]
+    explode_len = df[cols[0]].str.split(split_on).map(len)
+    repeat_list = []
+    for r, e in zip(df_cols.as_matrix(), explode_len):
+        repeat_list.extend([list(r)]*e)
+
+    df_repeat = pd.DataFrame(repeat_list, columns=cols_sep)
+    df_explode = pd.concat([df[col].str.split(split_on, expand=True).stack().str.strip().reset_index(drop=True)
+                            for col in cols], axis=1)
+
+    df_explode = pd.DataFrame(df_explode)[0].apply(lambda x: x.replace('[', '').replace(']', ''))
+
+    df_explode.columns = cols
+    return pd.concat((df_repeat, df_explode), axis=1)
 
 
 # csv_database = create_engine('sqlite:///taxi.db')
@@ -51,9 +69,6 @@ for df in pd.read_csv(file, chunksize=chunk_size, iterator=True, dtype={'POLYLIN
     print("Start calculating coordinates list")
     coordinates = itertools.chain(coordinates, list(itertools.chain.from_iterable(df['POLYLINE'])))
 
-    # TODO: Esegui rimozione delle tuple senza coordinate
-    # df = df[df['POLYLINE'].size > 0]
-
     # Write chunk to result csv file
     print("Start file writing")
     df.to_csv(result_csv, mode=write_mode, header=print_header, index=False)
@@ -77,8 +92,10 @@ print("Start clustering process")
 clusterResult = clustering.make_clustering_2(coordinates, 500)
 print("Cluster completed")
 
+del coordinates, coordinates_df
+
 print("Dump model")
-joblib.dump(clusterResult.model, result_model)
+clustering.dump_model(clusterResult.model, result_model)
 
 print_header = True
 write_mode = 'w'
@@ -86,7 +103,29 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True, dtype={'P
 
     df['POLYLINE'] = df['POLYLINE'].\
         apply(lambda x: [clustering.predict(clusterResult.model, point) for point in
-                         polyline_to_coordinates(x, r'\((-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\)')])
+                         polyline_to_coordinates(x, r'\((-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\)')]).astype(str)
+
+    df = explode(df, ['POLYLINE'])
+
+    df.rename(columns={df.columns[3]: "gate" }, inplace=True)
+
+    lastId = "";
+    lastGate = ""
+    count = 0;
+    for row in df.itertuples():
+        if df.at[row.Index, 'TRIP_ID'] == lastId:
+            count += 15
+            df.at[row.Index, 'TIMESTAMP'] = count
+            if df.at[row.Index, 'gate'] != lastGate:
+                lastGate = df.at[row.Index, 'gate']
+                df.at[row.Index, 'TIMESTAMP'] = count
+        else:
+            count = df.at[row.Index, 'TIMESTAMP']
+            lastGate = df.at[row.Index, 'gate']
+            lastId = df.at[row.Index, 'TRIP_ID']
+
+    df.drop_duplicates(['TRIP_ID','gate'], inplace=True)
+
     df.to_csv(result_csv, mode=write_mode, header=print_header, index=False)
 
     # Print CSV header only the first time
