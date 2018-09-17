@@ -2,7 +2,7 @@ import numpy as np
 import geopy.distance
 import json
 from sklearn.cluster import KMeans, MiniBatchKMeans
-
+from sklearn.externals import joblib
 
 class Result(object):
     mean = 0
@@ -25,7 +25,7 @@ class Result(object):
         return json.dumps(self.__dict__)
 
 
-def make_clustering_2(coordinates, clusters=int):
+def make_clustering_2(coordinates, clusters=int) -> Result:
     # model = KMeans(n_clusters=clusters, random_state=1).fit(coordinates)
     model = MiniBatchKMeans(n_clusters=clusters, random_state=1, init_size=3*clusters).fit(coordinates)
 
@@ -54,3 +54,7 @@ def make_clustering_2(coordinates, clusters=int):
 
 def predict(model, coordinates):
     return KMeans.predict(model, [(float(coordinates[0]), float(coordinates[1]))])[0]
+
+
+def dump_model(model, file_path=str):
+    joblib.dump(model, file_path)
