@@ -45,7 +45,7 @@ def explode(df, cols, split_on=',') -> pd.DataFrame:
 
 # csv_database = create_engine('sqlite:///taxi.db')
 result_folder = 'result/'
-file = 'dataset/taxi_small.zip'
+file = 'dataset/taxi.zip'
 result_csv = result_folder + 'taxi_cleaned.csv'
 result_coordinates = result_folder + 'coordinates.csv'
 result_model = result_folder + 'model.pkl'
@@ -64,7 +64,7 @@ for df in pd.read_csv(file, chunksize=chunk_size, iterator=True, dtype={'POLYLIN
     # Change coordinates format to be python compliant
     print("Start polyline refactoring")
     df['POLYLINE'] = df['POLYLINE'].\
-        apply(lambda x: polyline_to_coordinates(x, r'\[(-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\]'))
+        apply(lambda x: polyline_to_coordinates(x, r'\[(-?[0-9]{1,2}\.[0-9]+),\s*(-?[0-9]{1,2}\.[0-9]+)\]'))
 
     print("Start calculating coordinates list")
     coordinates = itertools.chain(coordinates, list(itertools.chain.from_iterable(df['POLYLINE'])))
