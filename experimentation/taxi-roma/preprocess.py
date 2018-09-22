@@ -7,12 +7,11 @@ import experimentation.clustering.clustering as clustering
 import experimentation.common.common as common
 
 result_folder = 'result/'
-file = 'dataset/taxi_rome_small.csv'
+file = 'dataset/taxi_rome.zip'
 result_csv = result_folder + 'taxi_cleaned.csv'
 result_coordinates = result_folder + 'coordinates.csv'
 result_model = result_folder + 'model.pkl'
-columns_to_remove = ["CALL_TYPE", "ORIGIN_CALL", "ORIGIN_STAND", "DAY_TYPE", "MISSING_DATA"]
-chunk_size = 100000
+chunk_size = 500000
 dist = 0
 print_header = True
 write_mode = 'w'
@@ -35,8 +34,7 @@ if resultFile.is_file() & resultFile.exists() & coordinatesFile.is_file() & coor
 else:
     print("Start loading csv file")
     for df in pd.read_csv(file, chunksize=chunk_size, iterator=True, names=["TAXI_ID", "TIMESTAMP", "POINT"], sep=";",
-                          parse_dates=['TIMESTAMP'], infer_datetime_format=True):
-        # Remove undesired columns from data set
+                          parse_dates=['TIMESTAMP'], infer_datetime_format=True, dtype={'TAXI_ID': int, 'POINT': str}):
         df = pd.DataFrame(df)
 
         # Convert datetime to unix timestamp
@@ -93,7 +91,7 @@ del coordinates
 print_header = True
 write_mode = 'w'
 
-for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True):
+for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True, dtype={'TAXI_ID': int, 'POINT': str}):
     df = pd.DataFrame(df)
 
     df['POINT'] = df['POINT'].apply(lambda x: [clustering.predict(clusterResult.model, point) for point in
