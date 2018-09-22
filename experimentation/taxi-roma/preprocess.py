@@ -7,7 +7,7 @@ import experimentation.clustering.clustering as clustering
 import experimentation.common.common as common
 
 result_folder = 'result/'
-file = 'dataset/taxi.zip'
+file = 'dataset/taxi_rome_small.csv'
 result_csv = result_folder + 'taxi_cleaned.csv'
 result_coordinates = result_folder + 'coordinates.csv'
 result_model = result_folder + 'model.pkl'
@@ -35,12 +35,12 @@ if resultFile.is_file() & resultFile.exists() & coordinatesFile.is_file() & coor
 else:
     print("Start loading csv file")
     for df in pd.read_csv(file, chunksize=chunk_size, iterator=True, names=["TAXI_ID", "TIMESTAMP", "POINT"], sep=";",
-                          parse_dates=['time'], infer_datetime_format=True):
+                          parse_dates=['TIMESTAMP'], infer_datetime_format=True):
         # Remove undesired columns from data set
         df = pd.DataFrame(df)
 
         # Convert datetime to unix timestamp
-        df['time'] = df['time'].apply(lambda x: common.datetime_to_unix(x))
+        df['TIMESTAMP'] = df['TIMESTAMP'].apply(lambda x: common.datetime_to_unix(x))
 
         # Change coordinates format to be python compliant
         print("Start point refactoring")
@@ -93,7 +93,7 @@ del coordinates
 print_header = True
 write_mode = 'w'
 
-for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True, dtype={'POLYLINE': str}):
+for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True):
     df = pd.DataFrame(df)
 
     df['POINT'] = df['POINT'].apply(lambda x: [clustering.predict(clusterResult.model, point) for point in
@@ -101,9 +101,9 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True, dtype={'P
                                                                               r'\((-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\)')]).astype(
         str)
 
-    df.rename(columns={df.columns[3]: "GATE"}, inplace=True)
+    df.rename(columns={df.columns[2]: "GATE"}, inplace=True)
 
-    df.drop(['TAXI_ID', 'GATE'], inplace=True)
+    df.drop_duplicates(['TAXI_ID', 'GATE'], inplace=True)
 
     df.to_csv(result_folder + 'taxi_rome_gate.csv', mode=write_mode, header=print_header, index=False)
 
