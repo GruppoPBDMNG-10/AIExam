@@ -58,3 +58,7 @@ def predict(model, coordinates):
 
 def dump_model(model, file_path=str):
     joblib.dump(model, file_path)
+
+
+def model_from_dump(file_path=str):
+    return joblib.load(file_path)

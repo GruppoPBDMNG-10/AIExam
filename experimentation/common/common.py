@@ -2,6 +2,7 @@ import geopy.distance
 import json
 import datetime
 import time
+import re
 
 
 def calculate_distance(first, second):
@@ -19,6 +20,10 @@ def calculate_distance_array(elements=list):
     return dist;
 
 
+def calculate_average_distance(elements=list):
+    yield calculate_distance_array(elements)/len(elements)
+
+
 def to_json_file(file_path=str, json_data=str):
     """It writes json data to the required file path"""
     with open(file_path, 'w') as outfile:
@@ -28,3 +33,14 @@ def to_json_file(file_path=str, json_data=str):
 def datetime_to_unix(date=datetime.datetime):
     """It converts a datetime object in unix timestamp"""
     return int(time.mktime(date.timetuple()))
+
+
+def polyline_to_coordinates(polyline, regex):
+    """It transforms the polyline column in coordinates array"""
+    coordinates_array = []
+    matches = re.finditer(regex, polyline)
+    # matches = re.finditer(r'\[(-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\]', polyline)
+    for match in matches:
+        coordinates_array.append((float(match.group(1)), float(match.group(2))))
+
+    return coordinates_array

@@ -1,26 +1,54 @@
-import re
+from pathlib import Path
 import pandas as pd
 import numpy as np
 import itertools
+
+from dateutil.parser import _resultbase
+
 import experimentation.clustering.clustering as clustering
 import experimentation.common.common as common
-
-
-def polyline_to_coordinates(polyline, regex):
-    """It transforms the polyline column in coordinates array"""
-    coordinates_array = []
-    matches = re.finditer(regex, polyline)
-    # matches = re.finditer(r'\[(-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\]', polyline)
-    for match in matches:
-        coordinates_array.append((float(match.group(1)), float(match.group(2))))
-
-    return coordinates_array
 
 
 def drop_columns(data_frame=pd.DataFrame, columns_name=list):
     """Drop specified columns from the required data frame"""
     return data_frame.drop(columns_name, axis=1)
 
+
+def tidy_split(df, column, sep=',', keep=False):
+    """
+    Split the values of a column and expand so the new DataFrame has one split
+    value per row. Filters rows where the column is missing.
+
+    Params
+    ------
+    df : pandas.DataFrame
+        dataframe with the column to split and expand
+    column : str
+        the column to split and expand
+    sep : str
+        the string used to split the column's values
+    keep : bool
+        whether to retain the presplit value as it's own row
+
+    Returns
+    -------
+    pandas.DataFrame
+        Returns a dataframe with the same columns as `df`.
+    """
+    indexes = list()
+    new_values = list()
+    df = df.dropna(subset=[column])
+    for i, presplit in enumerate(df[column].astype(str)):
+        values = presplit.split(sep)
+        if keep and len(values) > 1:
+            indexes.append(i)
+            new_values.append(presplit)
+        for value in values:
+            indexes.append(i)
+            new_values.append(value.replace('[', '').replace(']', ''))
+    new_df = df.iloc[indexes, :].copy()
+    new_df[column] = new_values
+    return new_df.reset_index(drop=True)
 
 def explode(df, cols, split_on=',') -> pd.DataFrame:
     """
@@ -56,46 +84,73 @@ print_header = True
 write_mode = 'w'
 coordinates = []
 
-for df in pd.read_csv(file, chunksize=chunk_size, iterator=True, dtype={'POLYLINE': str}):
-    # Remove undesired columns from data set
-    print("Start drop columns")
-    df = drop_columns(df, columns_to_remove)
 
-    # Change coordinates format to be python compliant
-    print("Start polyline refactoring")
-    df['POLYLINE'] = df['POLYLINE'].\
-        apply(lambda x: polyline_to_coordinates(x, r'\[(-?[0-9]{1,2}\.[0-9]+),\s*(-?[0-9]{1,2}\.[0-9]+)\]'))
+resultFile = Path(result_csv)
+coordinatesFile = Path(result_coordinates)
 
-    print("Start calculating coordinates list")
-    coordinates = itertools.chain(coordinates, list(itertools.chain.from_iterable(df['POLYLINE'])))
+if resultFile.is_file() & resultFile.exists() & coordinatesFile.is_file() & coordinatesFile.exists():
+    print("Loading coordinates from file")
 
-    # Write chunk to result csv file
-    print("Start file writing")
-    df.to_csv(result_csv, mode=write_mode, header=print_header, index=False)
+    for df in pd.read_csv(coordinatesFile, chunksize=chunk_size, iterator=True, header=None):
+        df = pd.DataFrame(df)
+        coordinates = itertools.chain(coordinates, zip(df.iloc[:, 0], df.iloc[:, 1]))
 
-    # rint CSV header only the first time
-    print_header = False
+    print("Start coordinates list creation")
+    coordinates = list(coordinates)
+    print("Coordinates list created")
 
-    # Change write mode to append. In this way, if the file already exists, it is rewritten only the first time.
-    write_mode = 'a'
+else:
+    for df in pd.read_csv(file, chunksize=chunk_size, iterator=True, dtype={'POLYLINE': str}):
+        # Remove undesired columns from data set
+        print("Start drop columns")
+        df = drop_columns(df, columns_to_remove)
 
-# With itertool, coordinates needs to be stored in memory after the execution.
-print("Start coordinates file creation process.")
-coordinates = list(coordinates)
-coordinates_df = pd.DataFrame.from_records(coordinates)
-coordinates_df.to_csv(result_coordinates, mode='w', header=False, index=False)
+        # Change coordinates format to be python compliant
+        print("Start polyline refactoring")
+        df['POLYLINE'] = df['POLYLINE']. \
+            apply(lambda x: common.polyline_to_coordinates(x, r'\[(-?[0-9]{1,2}\.[0-9]+),\s*(-?[0-9]{1,2}\.[0-9]+)\]'))
 
-dist = common.calculate_distance_array(coordinates)/len(coordinates)
+        print("Start calculating coordinates list")
+        coordinates = itertools.chain(coordinates, list(itertools.chain.from_iterable(df['POLYLINE'])))
+
+        # Write chunk to result csv file
+        print("Start file writing")
+        df.to_csv(result_csv, mode=write_mode, header=print_header, index=False)
+
+        # rint CSV header only the first time
+        print_header = False
+
+        # Change write mode to append. In this way, if the file already exists, it is rewritten only the first time.
+        write_mode = 'a'
+
+    # With itertool, coordinates needs to be stored in memory after the execution.
+    print("Start coordinates file creation process.")
+    coordinates = list(coordinates)
+    coordinates_df = pd.DataFrame.from_records(coordinates)
+    coordinates_df.to_csv(result_coordinates, mode='w', header=False, index=False)
+    del coordinates_df
+
+
+dist = common.calculate_average_distance(coordinates)
 print("Data set average distance: ", dist)
 
-print("Start clustering process")
-clusterResult = clustering.make_clustering_2(coordinates, 500)
-print("Cluster completed")
+clusterFile = Path(result_model)
+clusterResult = None
+clusterModel = None
 
-del coordinates, coordinates_df
+if clusterFile.is_file() & clusterFile.exists():
+    print("Loading cluster model from file")
+    clusterModel = clustering.model_from_dump(clusterFile)
+    clusterResult = clustering.Result(0, 0, 0, clusterModel)
+    print("Cluster model loaded: ", clusterModel)
+else:
+    print("Start clustering process")
+    clusterResult = clustering.make_clustering_2(coordinates, 500)
+    print("Cluster completed")
+    print("Dump model")
+    clustering.dump_model(clusterResult.model, result_model)
 
-print("Dump model")
-clustering.dump_model(clusterResult.model, result_model)
+del coordinates
 
 print_header = True
 write_mode = 'w'
@@ -103,11 +158,13 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True, dtype={'P
 
     df['POLYLINE'] = df['POLYLINE'].\
         apply(lambda x: [clustering.predict(clusterResult.model, point) for point in
-                         polyline_to_coordinates(x, r'\((-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\)')]).astype(str)
+                         common.polyline_to_coordinates(x, r'\((-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\)')]).astype(str)
 
-    df = explode(df, ['POLYLINE'])
+    df = tidy_split(df, 'POLYLINE')
 
-    df.rename(columns={df.columns[3]: "gate" }, inplace=True)
+    df.rename(columns={df.columns[3]: "GATE" }, inplace=True)
+
+    print("Dataframe: ", df.head(5))
 
     lastId = "";
     lastGate = ""
@@ -116,17 +173,17 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True, dtype={'P
         if df.at[row.Index, 'TRIP_ID'] == lastId:
             count += 15
             df.at[row.Index, 'TIMESTAMP'] = count
-            if df.at[row.Index, 'gate'] != lastGate:
-                lastGate = df.at[row.Index, 'gate']
+            if df.at[row.Index, 'GATE'] != lastGate:
+                lastGate = df.at[row.Index, 'GATE']
                 df.at[row.Index, 'TIMESTAMP'] = count
         else:
             count = df.at[row.Index, 'TIMESTAMP']
-            lastGate = df.at[row.Index, 'gate']
+            lastGate = df.at[row.Index, 'GATE']
             lastId = df.at[row.Index, 'TRIP_ID']
 
-    df.drop_duplicates(['TRIP_ID','gate'], inplace=True)
+    df.drop_duplicates(['TRIP_ID','GATE'], inplace=True)
 
-    df.to_csv(result_csv, mode=write_mode, header=print_header, index=False)
+    df.to_csv(result_csv + 'taxi_gate.csv', mode=write_mode, header=print_header, index=False)
 
     # Print CSV header only the first time
     print_header = False
