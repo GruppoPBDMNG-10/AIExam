@@ -2,6 +2,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import itertools
+import time
 
 from dateutil.parser import _resultbase
 
@@ -50,6 +51,7 @@ def tidy_split(df, column, sep=',', keep=False):
     new_df[column] = new_values
     return new_df.reset_index(drop=True)
 
+
 def explode(df, cols, split_on=',') -> pd.DataFrame:
     """
     Explode dataframe on the given column, split on given delimeter
@@ -59,7 +61,7 @@ def explode(df, cols, split_on=',') -> pd.DataFrame:
     explode_len = df[cols[0]].str.split(split_on).map(len)
     repeat_list = []
     for r, e in zip(df_cols.as_matrix(), explode_len):
-        repeat_list.extend([list(r)]*e)
+        repeat_list.extend([list(r)] * e)
 
     df_repeat = pd.DataFrame(repeat_list, columns=cols_sep)
     df_explode = pd.concat([df[col].str.split(split_on, expand=True).stack().str.strip().reset_index(drop=True)
@@ -71,6 +73,7 @@ def explode(df, cols, split_on=',') -> pd.DataFrame:
     return pd.concat((df_repeat, df_explode), axis=1)
 
 
+start_time = time.time()
 # csv_database = create_engine('sqlite:///taxi.db')
 result_folder = 'result/'
 file = 'dataset/taxi.zip'
@@ -78,7 +81,7 @@ result_csv = result_folder + 'taxi_cleaned.csv'
 result_coordinates = result_folder + 'coordinates.csv'
 result_model = result_folder + 'model.pkl'
 columns_to_remove = ["CALL_TYPE", "ORIGIN_CALL", "ORIGIN_STAND", "DAY_TYPE", "MISSING_DATA"]
-chunk_size = 100000
+chunk_size = 500000
 dist = 0
 print_header = True
 write_mode = 'w'
@@ -100,10 +103,13 @@ if resultFile.is_file() & resultFile.exists() & coordinatesFile.is_file() & coor
     print("Coordinates list created")
 
 else:
-    for df in pd.read_csv(file, chunksize=chunk_size, iterator=True, dtype={'POLYLINE': str}):
+    print("Start dataset processing")
+    for df in pd.read_csv(file, chunksize=chunk_size, iterator=True,
+                          usecols=['TRIP_ID', 'TAXI_ID', 'TIMESTAMP', 'POLYLINE'],
+                          dtype={'TRIP_ID': str, 'TAXI_ID': int, 'TIMESTAMP': int, 'POLYLINE': str}):
         # Remove undesired columns from data set
-        print("Start drop columns")
-        df = drop_columns(df, columns_to_remove)
+        # print("Start drop columns")
+        #df = drop_columns(df, columns_to_remove)
 
         # Change coordinates format to be python compliant
         print("Start polyline refactoring")
@@ -130,13 +136,16 @@ else:
     coordinates_df.to_csv(result_coordinates, mode='w', header=False, index=False)
     del coordinates_df
 
-
+file_processing = time.time()
+print("File processing time is %s seconds" % file_processing - start_time)
 dist = common.calculate_average_distance(coordinates)
 print("Data set average distance: ", dist)
 
 clusterFile = Path(result_model)
 clusterResult = None
 clusterModel = None
+
+pre_clustering_time = time.time()
 
 if clusterFile.is_file() & clusterFile.exists():
     print("Loading cluster model from file")
@@ -150,21 +159,27 @@ else:
     print("Dump model")
     clustering.dump_model(clusterResult.model, result_model)
 
+after_clustering_time = time.time()
+print("Clustering processing time is %s seconds" % after_clustering_time - pre_clustering_time)
 del coordinates
 
 print_header = True
 write_mode = 'w'
-for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True, dtype={'POLYLINE': str}):
+for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True,
+                      usecols=['TRIP_ID', 'TAXI_ID', 'TIMESTAMP', 'POLYLINE'],
+                      dtype={'TRIP_ID': str, 'TAXI_ID': int, 'TIMESTAMP': int, 'POLYLINE': str}):
 
-    df['POLYLINE'] = df['POLYLINE'].\
+    df['POLYLINE'] = df['POLYLINE']. \
         apply(lambda x: [clustering.predict(clusterResult.model, point) for point in
-                         common.polyline_to_coordinates(x, r'\((-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\)')]).astype(str)
+                         common.polyline_to_coordinates(x,
+                                                        r'\((-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\)')]).astype(
+        str)
 
     df = tidy_split(df, 'POLYLINE')
 
-    df.rename(columns={df.columns[3]: "GATE" }, inplace=True)
+    df.rename(columns={df.columns[3]: "GATE"}, inplace=True)
 
-    print("Dataframe: ", df.head(5))
+    df['GATE'].apply(lambda x: x.strip())
 
     lastId = "";
     lastGate = ""
@@ -181,9 +196,9 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True, dtype={'P
             lastGate = df.at[row.Index, 'GATE']
             lastId = df.at[row.Index, 'TRIP_ID']
 
-    df.drop_duplicates(['TRIP_ID','GATE'], inplace=True)
+    df.drop_duplicates(['TRIP_ID', 'GATE'], inplace=True)
 
-    df.to_csv(result_csv + 'taxi_gate.csv', mode=write_mode, header=print_header, index=False)
+    df.to_csv(result_folder + 'taxi_gate.csv', mode=write_mode, header=print_header, index=False)
 
     # Print CSV header only the first time
     print_header = False
@@ -191,9 +206,6 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True, dtype={'P
     # Change write mode to append. In this way, if the file already exists, it is rewrited only the first time.
     write_mode = 'a'
 
-
-
-
-
-
-
+end_time = time.time()
+print("Final file processing time is %s seconds." % end_time - after_clustering_time)
+print("Total processing time is %s seconds." % end_time - start_time)
