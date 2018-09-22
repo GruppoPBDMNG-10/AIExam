@@ -109,3 +109,6 @@ experimentation/taxi-repository/result/**
 
 experimentation/ngsim/dataset/**
 experimentation/ngsim/result/**
+
+experimentation/taxi-roma/dataset/**
+experimentation/taxi-roma/result/**
