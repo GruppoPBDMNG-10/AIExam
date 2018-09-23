@@ -6,16 +6,17 @@ import experimentation.common.common as common
 result_folder = 'result/';
 file = 'dataset/go_track_trackspoints.csv';
 result_csv = result_folder + 'go_track_trackpoints_cleaned.csv';
+result_gate = result_folder + 'go_track_trackpoints_gate.csv'
 result_coordinates = result_folder + 'coordinates.csv';
 result_model = result_folder + 'model.pkl'
 
-chunksize = 100000;
+chunksize = 500000;
 dist = 0;
 coordinates = [];
 print_header = True;
 write_mode = 'w';
 
-for df in pd.read_csv(file, chunksize=chunksize, iterator=True, dtype={'latitude': float, 'longitude': float}, parse_dates=['time'], infer_datetime_format=True):
+for df in pd.read_csv(file, chunksize=chunksize, iterator=True, usecols=["latitude","longitude","track_id","time"], dtype={'track_id': int, 'latitude': float, 'longitude': float}, parse_dates=['time'], infer_datetime_format=True):
     #Convert datetime to unix timestamp
     df['time'] = df['time'].apply(lambda x: common.datetime_to_unix(x))
 
@@ -48,7 +49,7 @@ print_header = True
 write_mode = 'w'
 
 gates = [];
-for df in pd.read_csv(result_csv, chunksize=chunksize, iterator=True, dtype={'latitude': float, 'longitude': float}):
+for df in pd.read_csv(result_csv, chunksize=chunksize, iterator=True, dtype={'track_id': int, 'latitude': float, 'longitude': float, 'time': int}):
 
     df = pd.DataFrame(df)
 
@@ -60,7 +61,7 @@ for df in pd.read_csv(result_csv, chunksize=chunksize, iterator=True, dtype={'la
     df.drop(['latitude', 'longitude'], axis=1, inplace=True)
     df.drop_duplicates(['track_id','gate'], inplace=True)
 
-    df.to_csv(result_csv, mode=write_mode, header=print_header, index=False)
+    df.to_csv(result_gate, mode=write_mode, header=print_header, index=False)
 
     # Print CSV header only the first time
     print_header = False
