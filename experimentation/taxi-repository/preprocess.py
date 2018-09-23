@@ -87,7 +87,6 @@ print_header = True
 write_mode = 'w'
 coordinates = []
 
-
 resultFile = Path(result_csv)
 coordinatesFile = Path(result_coordinates)
 
@@ -105,11 +104,15 @@ if resultFile.is_file() & resultFile.exists() & coordinatesFile.is_file() & coor
 else:
     print("Start dataset processing")
     for df in pd.read_csv(file, chunksize=chunk_size, iterator=True,
-                          usecols=['TRIP_ID', 'TAXI_ID', 'TIMESTAMP', 'POLYLINE'],
-                          dtype={'TRIP_ID': str, 'TAXI_ID': int, 'TIMESTAMP': int, 'POLYLINE': str}):
+                          usecols=['TRIP_ID', 'MISSING_DATA', 'TAXI_ID', 'TIMESTAMP', 'POLYLINE'],
+                          dtype={'TRIP_ID': str, 'MISSING_DATA': bool, 'TAXI_ID': int, 'TIMESTAMP': int,
+                                 'POLYLINE': str}):
         # Remove undesired columns from data set
-        # print("Start drop columns")
-        #df = drop_columns(df, columns_to_remove)
+        df = pd.DataFrame(df)
+        print("Start row filtering")
+        df = df[df['MISSING_DATA'] == False]
+        print("Start drop columns")
+        df.drop(labels=['MISSING_DATA'], axis=1, inplace=True)
 
         # Change coordinates format to be python compliant
         print("Start polyline refactoring")
@@ -137,9 +140,9 @@ else:
     del coordinates_df
 
 file_processing = time.time()
-#print("File processing time is %s seconds" % file_processing - start_time)
+# print("File processing time is %s seconds" % file_processing - start_time)
 dist = common.calculate_average_distance(coordinates)
-#print("Data set average distance: ", dist)
+# print("Data set average distance: ", dist)
 
 clusterFile = Path(result_model)
 clusterResult = None
@@ -160,7 +163,7 @@ else:
     clustering.dump_model(clusterResult.model, result_model)
 
 after_clustering_time = time.time()
-#print("Clustering processing time is %s seconds" % after_clustering_time - pre_clustering_time)
+# print("Clustering processing time is %s seconds" % after_clustering_time - pre_clustering_time)
 del coordinates
 
 print_header = True
@@ -207,5 +210,5 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True,
     write_mode = 'a'
 
 end_time = time.time()
-#print("Final file processing time is %s seconds." % end_time - after_clustering_time)
-#print("Total processing time is %s seconds." % end_time - start_time)
+# print("Final file processing time is %s seconds." % end_time - after_clustering_time)
+# print("Total processing time is %s seconds." % end_time - start_time)
