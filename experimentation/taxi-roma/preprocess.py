@@ -36,7 +36,7 @@ def calculate_trip_id(df):
 
 
 result_folder = 'result/'
-file = 'dataset/taxi_rome.csv'
+file = 'dataset/taxi_rome.zip'
 result_csv = result_folder + 'taxi_cleaned.csv'
 result_coordinates = result_folder + 'coordinates.csv'
 result_model = result_folder + 'model.pkl'
