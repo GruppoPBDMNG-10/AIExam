@@ -137,9 +137,9 @@ else:
     del coordinates_df
 
 file_processing = time.time()
-print("File processing time is %s seconds" % file_processing - start_time)
+#print("File processing time is %s seconds" % file_processing - start_time)
 dist = common.calculate_average_distance(coordinates)
-print("Data set average distance: ", dist)
+#print("Data set average distance: ", dist)
 
 clusterFile = Path(result_model)
 clusterResult = None
@@ -160,7 +160,7 @@ else:
     clustering.dump_model(clusterResult.model, result_model)
 
 after_clustering_time = time.time()
-print("Clustering processing time is %s seconds" % after_clustering_time - pre_clustering_time)
+#print("Clustering processing time is %s seconds" % after_clustering_time - pre_clustering_time)
 del coordinates
 
 print_header = True
@@ -179,7 +179,7 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True,
 
     df.rename(columns={df.columns[3]: "GATE"}, inplace=True)
 
-    df['GATE'].apply(lambda x: x.strip())
+    df['GATE'] = df['GATE'].apply(lambda x: x.strip())
 
     lastId = "";
     lastGate = ""
@@ -207,5 +207,5 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True,
     write_mode = 'a'
 
 end_time = time.time()
-print("Final file processing time is %s seconds." % end_time - after_clustering_time)
-print("Total processing time is %s seconds." % end_time - start_time)
+#print("Final file processing time is %s seconds." % end_time - after_clustering_time)
+#print("Total processing time is %s seconds." % end_time - start_time)

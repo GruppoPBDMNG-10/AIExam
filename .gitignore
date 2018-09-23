@@ -112,3 +112,6 @@ experimentation/ngsim/result/**
 
 experimentation/taxi-roma/dataset/**
 experimentation/taxi-roma/result/**
+
+experimentation/trap/dataset/**
+experimentation/trap/result/**
