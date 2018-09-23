@@ -6,8 +6,37 @@ import itertools
 import experimentation.clustering.clustering as clustering
 import experimentation.common.common as common
 
+driver_map = {}
+timestamp_map = {}
+last_trip_index = 0;
+four_hours = 4*60*60
+
+def calculate_trip_id(df):
+    global last_trip_index
+    timestamp = None
+    trip_id = driver_map.get(df['TAXI_ID'])
+    if trip_id:
+        #The current driver is already running in a trip
+        timestamp = timestamp_map.get(df['TAXI_ID'])
+        delta = df['TIMESTAMP'] - timestamp
+        if delta > four_hours:
+            #the trip is ended. Increment trip id and save it.
+            last_trip_index += 1
+            trip_id = last_trip_index
+            driver_map[df['TAXI_ID']] = trip_id
+    else:
+        last_trip_index += 1
+        trip_id = last_trip_index
+        driver_map[df['TAXI_ID']] = trip_id
+
+    # Update timestamp map with new timestamp recorded
+    timestamp_map[df['TAXI_ID']] = df['TIMESTAMP']
+
+    return trip_id
+
+
 result_folder = 'result/'
-file = 'dataset/taxi_rome.zip'
+file = 'dataset/taxi_rome.csv'
 result_csv = result_folder + 'taxi_cleaned.csv'
 result_coordinates = result_folder + 'coordinates.csv'
 result_model = result_folder + 'model.pkl'
@@ -102,6 +131,10 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True, dtype={'T
     df.rename(columns={df.columns[2]: "GATE"}, inplace=True)
 
     df.drop_duplicates(['TAXI_ID', 'GATE'], inplace=True)
+
+    # Define a trip
+    df['TRIP_ID'] = df.apply(lambda x: calculate_trip_id(x), axis=1)
+    df = df.reindex(columns=['TRIP_ID'] + df.columns[:-1].tolist())
 
     df.to_csv(result_folder + 'taxi_rome_gate.csv', mode=write_mode, header=print_header, index=False)
 
