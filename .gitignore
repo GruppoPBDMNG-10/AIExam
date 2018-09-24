@@ -104,11 +104,9 @@ venv.bak/
 .mypy_cache/
 
 .idea/
-experimentation/taxi-repository/dataset/**
-experimentation/taxi-repository/result/**
 
-experimentation/ngsim/dataset/**
-experimentation/ngsim/result/**
+experimentation/taxi-porto/dataset/**
+experimentation/taxi-porto/result/**
 
 experimentation/taxi-roma/dataset/**
 experimentation/taxi-roma/result/**
