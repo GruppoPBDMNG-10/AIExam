@@ -8,5 +8,5 @@ setup(
     license='',
     author='Gianluca Colaianni, Gaetano Ziri',
     author_email='fast_luca@hotmail.it; zirigaetano@gmail.com',
-    description='', install_requires=['geopy', 'sklearn', 'numpy']
+    description='', install_requires=['geopy', 'sklearn', 'numpy', 'pandas']
 )

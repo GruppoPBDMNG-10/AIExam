@@ -1,18 +1,9 @@
 from pathlib import Path
 import pandas as pd
-import numpy as np
 import itertools
 import time
-
-from dateutil.parser import _resultbase
-
 import experimentation.clustering.clustering as clustering
 import experimentation.common.common as common
-
-
-def drop_columns(data_frame=pd.DataFrame, columns_name=list):
-    """Drop specified columns from the required data frame"""
-    return data_frame.drop(columns_name, axis=1)
 
 
 def tidy_split(df, column, sep=',', keep=False):
@@ -80,7 +71,6 @@ file = 'dataset/taxi.zip'
 result_csv = result_folder + 'taxi_cleaned.csv'
 result_coordinates = result_folder + 'coordinates.csv'
 result_model = result_folder + 'model.pkl'
-columns_to_remove = ["CALL_TYPE", "ORIGIN_CALL", "ORIGIN_STAND", "DAY_TYPE", "MISSING_DATA"]
 chunk_size = 500000
 dist = 0
 print_header = True
@@ -180,7 +170,7 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True,
 
     df = tidy_split(df, 'POLYLINE')
 
-    df.rename(columns={df.columns[3]: "GATE"}, inplace=True)
+    df.rename(columns={df.columns[3]: "DRIVER_ID", df.columns[3]: "GATE"}, inplace=True)
 
     df['GATE'] = df['GATE'].apply(lambda x: x.strip())
 
