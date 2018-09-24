@@ -128,7 +128,7 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True, dtype={'T
                                                                               r'\((-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\)')]).astype(
         str)
 
-    df.rename(columns={df.columns[2]: "GATE"}, inplace=True)
+    df.rename(columns={df.columns[0]: "DRIVER_ID", df.columns[2]: "GATE"}, inplace=True)
 
     df.drop_duplicates(['TAXI_ID', 'GATE'], inplace=True)
 
