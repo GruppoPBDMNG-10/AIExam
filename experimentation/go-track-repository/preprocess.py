@@ -56,10 +56,15 @@ for df in pd.read_csv(result_csv, chunksize=chunksize, iterator=True, dtype={'tr
     for latitude, longitude in zip(df['latitude'], df['longitude']):
         gates.append(clustering.predict(clusterResult.model, [latitude, longitude]))
 
-    df['gate'] = gates
+    df['GATE'] = gates
 
     df.drop(['latitude', 'longitude'], axis=1, inplace=True)
-    df.drop_duplicates(['track_id','gate'], inplace=True)
+    df.drop_duplicates(['track_id','GATE'], inplace=True)
+
+    df['DRIVER_ID'] = df['track_id']
+
+    df.rename(columns={df.columns[0]: "TRIP_ID", df.columns[1]: "TIMESTAMP"}, inplace=True)
+    df = df.reindex(columns=['TRIP_ID', 'DRIVER_ID'] + df.columns[1:-1].tolist())
 
     df.to_csv(result_gate, mode=write_mode, header=print_header, index=False)
 
