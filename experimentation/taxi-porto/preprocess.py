@@ -4,6 +4,8 @@ import itertools
 import time
 import experimentation.clustering.clustering as clustering
 import experimentation.common.common as common
+import numpy as np
+from numba import jit
 
 
 def tidy_split(df, column, sep=',', keep=False):
@@ -62,6 +64,31 @@ def explode(df, cols, split_on=',') -> pd.DataFrame:
 
     df_explode.columns = cols
     return pd.concat((df_repeat, df_explode), axis=1)
+
+
+def manage_timestamp():
+    lat_id = ""
+    last_gate = ""
+    count = 0
+
+    def update_timestamp(df):
+        global last_id, count, last_gate
+        if df['TRIP_ID'] == last_id:
+            count += 15
+            df.at['TIMESTAMP'] = count
+            if df['GATE'] != last_gate:
+                last_gate = df['GATE']
+                df.at['TIMESTAMP'] = count
+        else:
+            count = df['TIMESTAMP']
+            last_gate = df['GATE']
+            last_id = df['TRIP_ID']
+
+
+@jit()
+def gate_substitution(model, polylines=np.array):
+    #return [clustering.predict(clusterResult.model, point) for point in common.polyline_to_coordinates(np.array2string(points), r'\((-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\)')]
+    return [clustering.predict(clusterResult.model, point) for point in [common.polyline_to_coordinates(polyline, r'\((-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\)') for polyline in np.nditer(polylines, flags=['refs_ok'], op_dtypes=['str'])]]
 
 
 start_time = time.time()
@@ -158,25 +185,30 @@ del coordinates
 
 print_header = True
 write_mode = 'w'
+
+print("Start reading cleaned file")
 for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True,
                       usecols=['TRIP_ID', 'TAXI_ID', 'TIMESTAMP', 'POLYLINE'],
                       dtype={'TRIP_ID': str, 'TAXI_ID': int, 'TIMESTAMP': int, 'POLYLINE': str}):
 
-    df['POLYLINE'] = df['POLYLINE']. \
-        apply(lambda x: [clustering.predict(clusterResult.model, point) for point in
-                         common.polyline_to_coordinates(x,
-                                                        r'\((-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\)')]).astype(
-        str)
+    print("Start polyline substitution")
+    df['POLYLINE'] = df['POLYLINE'].apply(lambda x: gate_substitution(clusterResult.model, x))
 
+    print("Start tidy_split")
     df = tidy_split(df, 'POLYLINE')
 
-    df.rename(columns={df.columns[3]: "DRIVER_ID", df.columns[3]: "GATE"}, inplace=True)
+    print("Start columns rename")
+    df.rename(columns={df.columns[1]: "DRIVER_ID", df.columns[3]: "GATE"}, inplace=True)
 
     df['GATE'] = df['GATE'].apply(lambda x: x.strip())
 
     lastId = "";
     lastGate = ""
-    count = 0;
+    counter = 0;
+
+    print("Start timestamps fixing")
+    #df = df.apply(lambda x: update_timestamp(x), axis=1)
+
     for row in df.itertuples():
         if df.at[row.Index, 'TRIP_ID'] == lastId:
             count += 15
@@ -189,8 +221,10 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True,
             lastGate = df.at[row.Index, 'GATE']
             lastId = df.at[row.Index, 'TRIP_ID']
 
+    print("Start drop duplicates")
     df.drop_duplicates(['TRIP_ID', 'GATE'], inplace=True)
 
+    print("Start file writing")
     df.to_csv(result_folder + 'taxi_gate.csv', mode=write_mode, header=print_header, index=False)
 
     # Print CSV header only the first time

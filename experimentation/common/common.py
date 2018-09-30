@@ -5,6 +5,9 @@ import time
 import re
 
 
+REGEX_PATTERN_MAP = {}
+
+
 def calculate_distance(first, second):
     """It calculates the distance between two points. The distance is in meters."""
     return geopy.distance.vincenty((first[0],first[1]),(second[0],second[1])).meters;
@@ -37,8 +40,14 @@ def datetime_to_unix(date=datetime.datetime):
 
 def polyline_to_coordinates(polyline, regex):
     """It transforms the polyline column in coordinates array"""
+    pattern = REGEX_PATTERN_MAP.get(regex)
+
+    if not pattern:
+        pattern = re.compile(regex)
+        REGEX_PATTERN_MAP[regex] = pattern
+
     coordinates_array = []
-    matches = re.finditer(regex, polyline)
+    matches = pattern.finditer(polyline)
     # matches = re.finditer(r'\[(-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\]', polyline)
     for match in matches:
         coordinates_array.append((float(match.group(1)), float(match.group(2))))
