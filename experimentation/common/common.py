@@ -3,6 +3,7 @@ import json
 import datetime
 import time
 import re
+import pandas as pd
 
 
 REGEX_PATTERN_MAP = {}
@@ -53,3 +54,21 @@ def polyline_to_coordinates(polyline, regex):
         coordinates_array.append((float(match.group(1)), float(match.group(2))))
 
     return coordinates_array
+
+
+def __process_raw(df, sequence_map=dict):
+    sequence = sequence_map.get(df['TRIP_ID'])
+    if not sequence:
+        sequence = []
+    sequence.append(df['GATE'])
+    sequence_map[df['TRIP_ID']] = sequence
+
+
+def __load_df(file) -> dict:
+    chunk_size = 500000
+    print("Start loading file")
+    sequence_map = {}
+    for df in pd.read_csv(file, chunksize=chunk_size, iterator=True, dtype={'TRIP_ID': str, 'DRIVER_ID': int, 'TIMESTAMP': int, 'GATE': int}):
+        df.apply(lambda x: __process_raw(x, sequence_map), axis=1)
+
+    return sequence_map
