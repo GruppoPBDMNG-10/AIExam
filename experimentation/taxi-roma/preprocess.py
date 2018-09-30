@@ -14,23 +14,23 @@ four_hours = 4*60*60
 def calculate_trip_id(df):
     global last_trip_index
     timestamp = None
-    trip_id = driver_map.get(df['TAXI_ID'])
+    trip_id = driver_map.get(df['DRIVER_ID'])
     if trip_id:
         #The current driver is already running in a trip
-        timestamp = timestamp_map.get(df['TAXI_ID'])
+        timestamp = timestamp_map.get(df['DRIVER_ID'])
         delta = df['TIMESTAMP'] - timestamp
         if delta > four_hours:
             #the trip is ended. Increment trip id and save it.
             last_trip_index += 1
             trip_id = last_trip_index
-            driver_map[df['TAXI_ID']] = trip_id
+            driver_map[df['DRIVER_ID']] = trip_id
     else:
         last_trip_index += 1
         trip_id = last_trip_index
-        driver_map[df['TAXI_ID']] = trip_id
+        driver_map[df['DRIVER_ID']] = trip_id
 
     # Update timestamp map with new timestamp recorded
-    timestamp_map[df['TAXI_ID']] = df['TIMESTAMP']
+    timestamp_map[df['DRIVER_ID']] = df['TIMESTAMP']
 
     return trip_id
 
@@ -130,7 +130,7 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True, dtype={'T
 
     df.rename(columns={df.columns[0]: "DRIVER_ID", df.columns[2]: "GATE"}, inplace=True)
 
-    df.drop_duplicates(['TAXI_ID', 'GATE'], inplace=True)
+    df.drop_duplicates(['DRIVER_ID', 'GATE'], inplace=True)
 
     # Define a trip
     df['TRIP_ID'] = df.apply(lambda x: calculate_trip_id(x), axis=1)
