@@ -24,7 +24,7 @@ def __load_df(file) -> dict:
     return sequence_map
 
 
-def prepare_dataset_rapresentation(file) -> (dict, list):
+def prepare_dataset_rapresentation_old(file) -> (dict, list):
     """Load from the specified file the dataset. The result is a dict having as key the TRIP_ID and as values the
     one-hot representation of each sequence."""
 
@@ -35,10 +35,35 @@ def prepare_dataset_rapresentation(file) -> (dict, list):
     result = dict()
 
     for key, sequence in sequences_map.items():
+        representation = []
         for gate in sequence:
             elem = np.zeros((len(gates), 1), dtype=np.int8)
             elem[gates_index[gate]] = 1
-            result[key] = elem
+            representation = np.append(representation, elem)
+        result[key] = representation
+
+    return result, gates
+
+
+def prepare_dataset_rapresentation(file) -> (dict, list):
+    """Load from the specified file the dataset. The result is a dict having as key the TRIP_ID and as values the
+    one-hot representation of each sequence."""
+
+    sequences_map = __load_df(file)
+    gates = sorted(list(set(itertools.chain.from_iterable(sequences_map.values()))))
+    gates_index = dict((gate, gates.index(gate)) for gate in gates)
+
+    result = dict()
+    print("Start dictionary representation")
+
+    for key, sequence in sequences_map.items():
+        representation = []
+        for gate in sequence:
+            elem = np.zeros((len(gates)), dtype=np.int8)
+            elem[gates_index[gate]] = 1
+            representation.append(elem)
+        representation = np.array(representation)
+        result[key] = representation
 
     return result, gates
 
@@ -56,6 +81,9 @@ def build_model(dataset=dict) -> hmm.MultinomialHMM:
 
     vector = np.concatenate(vector)
 
+    print(np.info(vector))
+    print("n_samples:", sum(lengths))
+
     print("Start model training")
     model = hmm.MultinomialHMM(n_components=2, random_state=42, n_iter=1000, tol=0.001)
     model = model.fit(vector, lengths=lengths)
@@ -67,10 +95,5 @@ def dump(model, filename):
     joblib.dump(model, filename)
 
 
-def load_dump(filename):
-    return joblib.load(filename, hmm.MultinomialHMM)
-
-
-dataset, gates = prepare_dataset_rapresentation('../taxi-roma/result/taxi_rome_gate.csv')
-model = build_model(dataset)
-print("Model created:", model)
+def load_dump(filename) -> hmm.MultinomialHMM:
+    return joblib.load(filename)
