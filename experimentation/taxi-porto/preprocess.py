@@ -225,7 +225,7 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True,
     df.drop_duplicates(['TRIP_ID', 'GATE'], inplace=True)
 
     print("Start file writing")
-    df.to_csv(result_folder + 'taxi_gate.csv', mode=write_mode, header=print_header, index=False)
+    df.to_csv(result_folder + 'taxi_porto_gate.csv', mode=write_mode, header=print_header, index=False)
 
     # Print CSV header only the first time
     print_header = False
