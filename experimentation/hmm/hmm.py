@@ -68,7 +68,7 @@ def prepare_dataset_rapresentation(file) -> (dict, list):
     return result, gates
 
 
-def build_model(dataset=dict) -> hmm.MultinomialHMM:
+def build_model(dataset=dict, components=2, iter=1000, tol=0.01) -> hmm.MultinomialHMM:
     """It builds a MultinomialHMM from the dataset. The input dataset expected has the same form obtained from
     prepare_dataset_rapresentation method."""
 
@@ -85,7 +85,7 @@ def build_model(dataset=dict) -> hmm.MultinomialHMM:
     print("n_samples:", sum(lengths))
 
     print("Start model training")
-    model = hmm.MultinomialHMM(n_components=2, random_state=42, n_iter=1000, tol=0.001)
+    model = hmm.MultinomialHMM(n_components=components, random_state=42, n_iter=iter, tol=tol)
     model = model.fit(vector, lengths=lengths)
 
     return model
