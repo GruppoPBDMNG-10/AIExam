@@ -3,6 +3,7 @@ from hmmlearn import hmm
 import pandas as pd
 import itertools
 from sklearn.externals import joblib
+import gc
 
 
 def __process_raw(df, sequence_map=dict):
@@ -18,44 +19,30 @@ def __load_df(file) -> dict:
     print("Start loading file")
     sequence_map = {}
     for df in pd.read_csv(file, chunksize=chunk_size, iterator=True,
-                          dtype={'TRIP_ID': str, 'DRIVER_ID': int, 'TIMESTAMP': int, 'GATE': int}):
+                          dtype={'TRIP_ID': str, 'DRIVER_ID': int, 'TIMESTAMP': int, 'GATE': float}):
         df.apply(lambda x: __process_raw(x, sequence_map), axis=1)
 
     return sequence_map
 
 
-def prepare_dataset_rapresentation_old(file) -> (dict, list):
-    """Load from the specified file the dataset. The result is a dict having as key the TRIP_ID and as values the
-    one-hot representation of each sequence."""
-
-    sequences_map = __load_df(file)
-    gates = sorted(list(set(itertools.chain.from_iterable(sequences_map.values()))))
-    gates_index = dict((gate, gates.index(gate)) for gate in gates)
-
-    result = dict()
-
-    for key, sequence in sequences_map.items():
-        representation = []
-        for gate in sequence:
-            elem = np.zeros((len(gates), 1), dtype=np.int8)
-            elem[gates_index[gate]] = 1
-            representation = np.append(representation, elem)
-        result[key] = representation
-
-    return result, gates
+def concat(array=np.array, value=np.array):
+    if array.size == 0:
+        return value
+    return np.append(array, value, axis=1)
 
 
 def prepare_dataset_rapresentation(file) -> (dict, list):
     """Load from the specified file the dataset. The result is a dict having as key the TRIP_ID and as values the
     one-hot representation of each sequence."""
-
     sequences_map = __load_df(file)
     gates = sorted(list(set(itertools.chain.from_iterable(sequences_map.values()))))
     gates_index = dict((gate, gates.index(gate)) for gate in gates)
 
-    result = dict()
+    gc.collect()
+
     print("Start dictionary representation")
 
+    """
     for key, sequence in sequences_map.items():
         representation = []
         for gate in sequence:
@@ -63,7 +50,19 @@ def prepare_dataset_rapresentation(file) -> (dict, list):
             elem[gates_index[gate]] = 1
             representation.append(elem)
         representation = np.array(representation)
-        result[key] = representation
+        print(np.info(representation))
+        result[key] = representation"""
+
+    result = dict((key, np.zeros((len(sequence), len(gates)), dtype=np.int8)) for key, sequence in sequences_map.items())
+
+    for key, sequence in sequences_map.items():
+        #representation = np.zeros((len(sequence), len(gates)), dtype=np.int8)
+        for i, gate in enumerate(sequence):
+            #elem = np.zeros((1, len(gates)), dtype=np.int8)
+            #elem[0, gates_index[gate]] = 1
+            #representation[i, gates_index[gate]] = 1
+            result[key][i, gates_index[gate]] = 1
+
 
     return result, gates
 
