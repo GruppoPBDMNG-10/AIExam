@@ -9,7 +9,7 @@ EXP_PATH = RESULT_PATH + 'experimentation/hmm/'
 MODEL_PATH = EXP_PATH + 'model_hmm.pkl'
 DATASET_PATH = RESULT_PATH + 'taxi_porto_gate.csv'
 MODE = ''
-MAX_TEST_LENGTH = -1
+MAX_TEST_LENGTH = 7000
 
 
 def calcualate_scores_dict(dataset=dict, model=hmm.hmm.MultinomialHMM) -> dict:

@@ -74,11 +74,13 @@ def build_model(dataset=dict, components=2, iter=1000, tol=0.01) -> hmm.Multinom
 
     for sequence in dataset.values():
         elem = sequence.toarray()
+        print(np.info(elem))
         vector.append(elem)
         lengths.append(len(elem))
 
     vector = np.concatenate(vector)
 
+    print("")
     print(np.info(vector))
     print("n_samples:", sum(lengths))
 
