@@ -36,7 +36,7 @@ hmm_model_file = Path(MODEL_PATH)
 
 print("Dataset loading completed")
 
-test_data = retrieve_test_samples(dataset, min_sequence_length=5, max_sequence_length=100,
+test_data = retrieve_test_samples(dataset, min_sequence_length=5, max_sequence_length=150,
                                   max_test_data_length=MAX_TEST_LENGTH)
 
 model = None
