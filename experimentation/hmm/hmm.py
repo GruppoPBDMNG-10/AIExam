@@ -3,6 +3,7 @@ from hmmlearn import hmm
 import pandas as pd
 import itertools
 from sklearn.externals import joblib
+from scipy import sparse
 import gc
 
 
@@ -21,14 +22,9 @@ def __load_df(file) -> dict:
     for df in pd.read_csv(file, chunksize=chunk_size, iterator=True,
                           dtype={'TRIP_ID': str, 'DRIVER_ID': int, 'TIMESTAMP': int, 'GATE': float}):
         df.apply(lambda x: __process_raw(x, sequence_map), axis=1)
+        del df
 
     return sequence_map
-
-
-def concat(array=np.array, value=np.array):
-    if array.size == 0:
-        return value
-    return np.append(array, value, axis=1)
 
 
 def prepare_dataset_rapresentation(file) -> (dict, list):
@@ -53,15 +49,16 @@ def prepare_dataset_rapresentation(file) -> (dict, list):
         print(np.info(representation))
         result[key] = representation"""
 
-    result = dict((key, np.zeros((len(sequence), len(gates)), dtype=np.int8)) for key, sequence in sequences_map.items())
+    #result = dict((key, sparse.csr_matrix(np.zeros((len(sequence), len(gates)), dtype=np.uint8))) for key, sequence in sequences_map.items())
+    result = dict()
 
     for key, sequence in sequences_map.items():
-        #representation = np.zeros((len(sequence), len(gates)), dtype=np.int8)
+        representation = np.zeros((len(sequence), len(gates)), dtype=np.int8)
         for i, gate in enumerate(sequence):
-            #elem = np.zeros((1, len(gates)), dtype=np.int8)
-            #elem[0, gates_index[gate]] = 1
-            #representation[i, gates_index[gate]] = 1
-            result[key][i, gates_index[gate]] = 1
+            elem = np.zeros((1, len(gates)), dtype=np.int8)
+            elem[0, gates_index[gate]] = 1
+            representation[i, gates_index[gate]] = 1
+        result[key] = sparse.csr_matrix(representation)
 
 
     return result, gates
@@ -73,10 +70,12 @@ def build_model(dataset=dict, components=2, iter=1000, tol=0.01) -> hmm.Multinom
 
     vector = []
     lengths = []
+    elem = None
 
     for sequence in dataset.values():
-        vector.append(sequence)
-        lengths.append(len(sequence))
+        elem = sequence.toarray()
+        vector.append(elem)
+        lengths.append(len(elem))
 
     vector = np.concatenate(vector)
 
