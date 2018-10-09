@@ -3,8 +3,6 @@ from hmmlearn import hmm
 import pandas as pd
 import itertools
 from sklearn.externals import joblib
-from scipy import sparse
-import gc
 
 
 def __process_raw(df, sequence_map=dict):
@@ -20,7 +18,7 @@ def __load_df(file) -> dict:
     print("Start loading file")
     sequence_map = {}
     for df in pd.read_csv(file, chunksize=chunk_size, iterator=True,
-                          dtype={'TRIP_ID': str, 'DRIVER_ID': int, 'TIMESTAMP': int, 'GATE': float}):
+                          dtype={'TRIP_ID': str, 'DRIVER_ID': int, 'TIMESTAMP': int, 'GATE': int}):
         df.apply(lambda x: __process_raw(x, sequence_map), axis=1)
         del df
 
@@ -31,35 +29,19 @@ def prepare_dataset_rapresentation(file) -> (dict, list):
     """Load from the specified file the dataset. The result is a dict having as key the TRIP_ID and as values the
     one-hot representation of each sequence."""
     sequences_map = __load_df(file)
+
     gates = sorted(list(set(itertools.chain.from_iterable(sequences_map.values()))))
     gates_index = dict((gate, gates.index(gate)) for gate in gates)
 
-    gc.collect()
-
     print("Start dictionary representation")
 
-    """
-    for key, sequence in sequences_map.items():
-        representation = []
-        for gate in sequence:
-            elem = np.zeros((len(gates)), dtype=np.int8)
-            elem[gates_index[gate]] = 1
-            representation.append(elem)
-        representation = np.array(representation)
-        print(np.info(representation))
-        result[key] = representation"""
-
-    #result = dict((key, sparse.csr_matrix(np.zeros((len(sequence), len(gates)), dtype=np.uint8))) for key, sequence in sequences_map.items())
     result = dict()
 
     for key, sequence in sequences_map.items():
         representation = np.zeros((len(sequence), len(gates)), dtype=np.int8)
         for i, gate in enumerate(sequence):
-            elem = np.zeros((1, len(gates)), dtype=np.int8)
-            elem[0, gates_index[gate]] = 1
             representation[i, gates_index[gate]] = 1
-        result[key] = sparse.csr_matrix(representation)
-
+        result[key] = representation
 
     return result, gates
 
@@ -73,10 +55,8 @@ def build_model(dataset=dict, components=2, iter=1000, tol=0.01) -> hmm.Multinom
     elem = None
 
     for sequence in dataset.values():
-        elem = sequence.toarray()
-        print(np.info(elem))
-        vector.append(elem)
-        lengths.append(len(elem))
+        vector.append(sequence)
+        lengths.append(len(sequence))
 
     vector = np.concatenate(vector)
 
