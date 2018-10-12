@@ -6,9 +6,10 @@ import json
 RESULT_PATH = 'result/'
 EXP_PATH = RESULT_PATH + 'experimentation/hmm/'
 MODEL_PATH = EXP_PATH + 'model_hmm.pkl'
-DATASET_PATH = RESULT_PATH + 'taxi_porto_gate.csv'
+DATASET_PATH = RESULT_PATH + 'trap_gate.csv'
 MODE = ''
-MAX_TEST_LENGTH = 7000
+#MAX_TEST_LENGTH = 350228
+MAX_TEST_LENGTH = 175114
 
 dataset, gates = hmm.prepare_dataset_rapresentation(DATASET_PATH)
 hmm_model_file = Path(MODEL_PATH)
