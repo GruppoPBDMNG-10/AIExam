@@ -79,7 +79,7 @@ def load_dump(filename) -> hmm.MultinomialHMM:
     return joblib.load(filename)
 
 
-def calcualate_scores_dict(dataset=dict, model=hmm.hmm.MultinomialHMM) -> dict:
+def calcualate_scores_dict(dataset=dict, model=hmm.MultinomialHMM) -> dict:
     result = dict((str(key), model.score(value, [len(value)]) / len(value)) for key, value in dataset.items())
     return result
 
