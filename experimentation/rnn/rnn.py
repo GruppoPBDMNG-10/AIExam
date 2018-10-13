@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import itertools
+import json
 
 
 def retrieve_test_samples(data_set: dict,
@@ -80,4 +81,38 @@ def sample(predictions, temp=1.0):
     probabilities = np.random.multinomial(1, predictions, 1)
     return np.argmax(probabilities)
 
+
+def probability_gap(predictions, next_gate_index: int):
+    predictions = np.asarray(predictions).astype('float64')
+    max_gate_index = np.argmax(predictions)
+    return predictions[max_gate_index] - predictions[next_gate_index]
+
+
+def calculate_scores_dict(trajectories_map: dict, model: tf.keras.models.Sequential, gates_index: dict, gates: list, length: int) -> list:
+    result = dict()
+    for key, value in trajectories_map.items():
+        num_followers = len(value) - length
+        sequence_probability_gap = 0
+        for i in range(0, num_followers):
+            samples = []
+            classification = []
+            samples.append(value[i: i + length])
+            classification.append(value[i + length])
+            items = one_hot_encoding(samples, classification, gates_index, gates)
+            sequence_probability_gap += probability_gap((model.predict(items[0], verbose=0)[0]), gates_index[value[i + length]])
+            result[key] = (1 - (sequence_probability_gap / num_followers))
+    return result
+
+
+def calculate_save_statistics(scores_dict=dict, out_file=str):
+    scores = [value for value in scores_dict.values()]
+    mean = np.mean(scores)
+    variance = np.var(scores)
+    std = np.std(scores)
+    total = np.sum(scores)
+    result = {'mean': mean, 'variance': variance, 'std': std, 'total:': total}
+    with open(out_file, 'w') as outfile:
+        json.dump(result, outfile)
+
+    return mean, variance, std, total
 
