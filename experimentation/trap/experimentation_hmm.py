@@ -1,6 +1,5 @@
 from experimentation.hmm import hmm
 from pathlib import Path
-import numpy as np
 import json
 
 RESULT_PATH = 'result/'
@@ -39,12 +38,7 @@ with open(EXP_PATH + 'scores.json', 'w') as outfile:
     json.dump(scores_dict, outfile)
 
 print("Start statistics calculation")
-scores = [value for value in scores_dict.values()]
-mean = np.mean(scores)
-variance = np.var(scores)
-std = np.std(scores)
-total = np.sum(scores)
-
+mean, variance, std, total = hmm.calculate_save_statistics(scores_dict, EXP_PATH + 'statistics.json')
 print("Total:", total, ", Mean:", mean, ", Variance", variance, "Standard Derivation:", std)
 
 anomalous = dict(

@@ -1,8 +1,6 @@
 from experimentation.hmm import hmm
 from pathlib import Path
-import numpy as np
 import json
-import math
 
 
 RESULT_PATH = 'result/'
@@ -14,6 +12,7 @@ MAX_TEST_LENGTH = -1
 
 
 dataset, gates = hmm.prepare_dataset_rapresentation(DATASET_PATH)
+print("Number of gates:", len(gates))
 hmm_model_file = Path(MODEL_PATH)
 
 print("Dataset loading completed")
