@@ -128,6 +128,8 @@ else:
         df = pd.DataFrame(df)
         print("Start row filtering")
         df = df[df['MISSING_DATA'] == False]
+        df = df[df['POLYLINE'] != '[]']
+
         print("Start drop columns")
         df.drop(labels=['MISSING_DATA'], axis=1, inplace=True)
 
@@ -192,7 +194,11 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True,
                       dtype={'TRIP_ID': str, 'TAXI_ID': int, 'TIMESTAMP': int, 'POLYLINE': str}):
 
     print("Start polyline substitution")
-    df['POLYLINE'] = df['POLYLINE'].apply(lambda x: gate_substitution(clusterResult.model, x))
+    df['POLYLINE'] = df['POLYLINE']. \
+        apply(lambda x: [clustering.predict(clusterResult.model, point) for point in
+                         common.polyline_to_coordinates(x,
+                                                        r'\((-?[0-9]{1,2}\.[0-9]+),\s(-?[0-9]{1,2}\.[0-9]+)\)')]).astype(
+        str)
 
     print("Start tidy_split")
     df = tidy_split(df, 'POLYLINE')
@@ -225,7 +231,7 @@ for df in pd.read_csv(result_csv, chunksize=chunk_size, iterator=True,
     df.drop_duplicates(['TRIP_ID', 'GATE'], inplace=True)
 
     print("Start file writing")
-    df.to_csv(result_folder + 'taxi_gate.csv', mode=write_mode, header=print_header, index=False)
+    df.to_csv(result_folder + 'taxi_porto_gate.csv', mode=write_mode, header=print_header, index=False)
 
     # Print CSV header only the first time
     print_header = False

@@ -3,6 +3,7 @@ from hmmlearn import hmm
 import pandas as pd
 import itertools
 from sklearn.externals import joblib
+import json
 
 
 def __process_raw(df, sequence_map=dict):
@@ -20,6 +21,7 @@ def __load_df(file) -> dict:
     for df in pd.read_csv(file, chunksize=chunk_size, iterator=True,
                           dtype={'TRIP_ID': str, 'DRIVER_ID': int, 'TIMESTAMP': int, 'GATE': int}):
         df.apply(lambda x: __process_raw(x, sequence_map), axis=1)
+        del df
 
     return sequence_map
 
@@ -27,28 +29,31 @@ def __load_df(file) -> dict:
 def prepare_dataset_rapresentation(file) -> (dict, list):
     """Load from the specified file the dataset. The result is a dict having as key the TRIP_ID and as values the
     one-hot representation of each sequence."""
-
     sequences_map = __load_df(file)
+
     gates = sorted(list(set(itertools.chain.from_iterable(sequences_map.values()))))
     gates_index = dict((gate, gates.index(gate)) for gate in gates)
+
+    print("Start dictionary representation")
 
     result = dict()
 
     for key, sequence in sequences_map.items():
-        for gate in sequence:
-            elem = np.zeros((len(gates), 1), dtype=np.int8)
-            elem[gates_index[gate]] = 1
-            result[key] = elem
+        representation = np.zeros((len(sequence), len(gates)), dtype=np.int8)
+        for i, gate in enumerate(sequence):
+            representation[i, gates_index[gate]] = 1
+        result[key] = representation
 
     return result, gates
 
 
-def build_model(dataset=dict) -> hmm.MultinomialHMM:
+def build_model(dataset=dict, components=2, iter=1000, tol=0.01) -> hmm.MultinomialHMM:
     """It builds a MultinomialHMM from the dataset. The input dataset expected has the same form obtained from
     prepare_dataset_rapresentation method."""
 
     vector = []
     lengths = []
+    elem = None
 
     for sequence in dataset.values():
         vector.append(sequence)
@@ -56,8 +61,12 @@ def build_model(dataset=dict) -> hmm.MultinomialHMM:
 
     vector = np.concatenate(vector)
 
+    print("")
+    print(np.info(vector))
+    print("n_samples:", sum(lengths))
+
     print("Start model training")
-    model = hmm.MultinomialHMM(n_components=2, random_state=42, n_iter=1000, tol=0.001)
+    model = hmm.MultinomialHMM(n_components=components, random_state=42, n_iter=iter, tol=tol)
     model = model.fit(vector, lengths=lengths)
 
     return model
@@ -67,10 +76,36 @@ def dump(model, filename):
     joblib.dump(model, filename)
 
 
-def load_dump(filename):
-    return joblib.load(filename, hmm.MultinomialHMM)
+def load_dump(filename) -> hmm.MultinomialHMM:
+    return joblib.load(filename)
 
 
-dataset, gates = prepare_dataset_rapresentation('../taxi-roma/result/taxi_rome_gate.csv')
-model = build_model(dataset)
-print("Model created:", model)
+def calcualate_scores_dict(dataset=dict, model=hmm.MultinomialHMM) -> dict:
+    result = dict((str(key), model.score(value, [len(value)]) / len(value)) for key, value in dataset.items())
+    return result
+
+
+def retrieve_test_samples(dataset=dict, min_sequence_length=3, max_sequence_length=-1, max_test_data_length=-1) -> dict:
+    print("Dataset samples before filtering:", len(dataset.keys()))
+    if max_sequence_length > 0:
+        result = dict(
+            (key, value) for key, value in dataset.items() if max_sequence_length >= len(value) >= min_sequence_length)
+    else:
+        result = dict((key, value) for key, value in dataset.items() if len(value) >= min_sequence_length)
+    if max_test_data_length > 0 and len(result.keys()) > max_test_data_length:
+        result = dict(itertools.islice(result.items(), max_test_data_length))
+    print("Dataset samples after filtering:", len(result.keys()))
+    return result
+
+
+def calculate_save_statistics(scores_dict=dict, out_file=str):
+    scores = [value for value in scores_dict.values()]
+    mean = np.mean(scores)
+    variance = np.var(scores)
+    std = np.std(scores)
+    total = np.sum(scores)
+    result = {'mean': mean, 'variance': variance, 'std': std, 'total:': total}
+    with open(out_file, 'w') as outfile:
+        json.dump(result, outfile)
+
+    return mean, variance, std, total
