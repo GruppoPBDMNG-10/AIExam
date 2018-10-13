@@ -3,6 +3,7 @@ from hmmlearn import hmm
 import pandas as pd
 import itertools
 from sklearn.externals import joblib
+import json
 
 
 def __process_raw(df, sequence_map=dict):
@@ -95,3 +96,16 @@ def retrieve_test_samples(dataset=dict, min_sequence_length=3, max_sequence_leng
         result = dict(itertools.islice(result.items(), max_test_data_length))
     print("Dataset samples after filtering:", len(result.keys()))
     return result
+
+
+def calculate_save_statistics(scores_dict=dict, out_file=str):
+    scores = [value for value in scores_dict.values()]
+    mean = np.mean(scores)
+    variance = np.var(scores)
+    std = np.std(scores)
+    total = np.sum(scores)
+    result = {'mean': mean, 'variance': variance, 'std': std, 'total:': total}
+    with open(out_file, 'w') as outfile:
+        json.dump(result, outfile)
+
+    return mean, variance, std, total

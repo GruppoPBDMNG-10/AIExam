@@ -1,9 +1,7 @@
 from experimentation.hmm import hmm
 from pathlib import Path
-from scipy import sparse
-import numpy as np
 import json
-import itertools
+
 
 RESULT_PATH = 'result/'
 EXP_PATH = RESULT_PATH + 'experimentation/hmm/'
@@ -13,30 +11,12 @@ MODE = ''
 MAX_TEST_LENGTH = -1
 
 
-def calcualate_scores_dict(dataset=dict, model=hmm.hmm.MultinomialHMM) -> dict:
-    result = dict((key, model.score(value.toarray(), [len(value.toarray())]) / len(value.toarray())) for key, value in dataset.items())
-    return result
-
-
-def retrieve_test_samples(dataset=dict, min_sequence_length=3, max_sequence_length=-1, max_test_data_length=-1) -> dict:
-    print("Dataset samples before filtering:", len(dataset.keys()))
-    if max_sequence_length > 0:
-        result = dict(
-            (key, value) for key, value in dataset.items() if max_sequence_length >= len(value.toarray()) >= min_sequence_length)
-    else:
-        result = dict((key, value) for key, value in dataset.items() if len(value.toArray()) >= min_sequence_length)
-    if max_test_data_length > 0 and len(result.keys()) > max_test_data_length:
-        result = dict(itertools.islice(result.items(), max_test_data_length))
-    print("Dataset samples after filtering:", len(result.keys()))
-    return result
-
-
 dataset, gates = hmm.prepare_dataset_rapresentation(DATASET_PATH)
+print("Number of gates:", len(gates))
 hmm_model_file = Path(MODEL_PATH)
 
 print("Dataset loading completed")
-
-test_data = retrieve_test_samples(dataset, min_sequence_length=5, max_sequence_length=150,
+test_data = hmm.retrieve_test_samples(dataset, min_sequence_length=5, max_sequence_length=150,
                                   max_test_data_length=MAX_TEST_LENGTH)
 
 model = None
@@ -51,7 +31,7 @@ else:
     hmm.dump(model, MODEL_PATH)
 
 print("Start calculating score for each sample")
-scores_dict = calcualate_scores_dict(dataset, model)
+scores_dict = hmm.calcualate_scores_dict(dataset, model)
 
 print('Saving scores dictionary')
 
@@ -59,12 +39,7 @@ with open(EXP_PATH + 'scores.json', 'w') as outfile:
     json.dump(scores_dict, outfile)
 
 print("Start statistics calculation")
-scores = [value for value in scores_dict.values()]
-mean = np.mean(scores)
-variance = np.var(scores)
-std = np.std(scores)
-total = np.sum(scores)
-
+mean, variance, std, total = hmm.calculate_save_statistics(scores_dict, EXP_PATH + 'statistics.json')
 print("Total:", total, ", Mean:", mean, ", Variance", variance, "Standard Derivation:", std)
 
 anomalous = dict(
