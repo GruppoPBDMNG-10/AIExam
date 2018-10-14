@@ -4,6 +4,7 @@ import experimentation.common.common as common
 import experimentation.RNN.rnn as rnn
 import numpy as np
 from argparse import ArgumentParser
+import json
 
 
 parser = ArgumentParser()
@@ -11,7 +12,7 @@ parser.add_argument(
     "-d",
     "--data-set",
     dest="data_set",
-    default='./result/taxi_rome_gate.csv',
+    default='./result/taxi_rome_gate_light.csv',
     help="data-set file path",
     metavar="DATA-SET")
 
@@ -27,7 +28,7 @@ parser.add_argument(
     "-m",
     "--model",
     dest="model",
-    default='./result/experimentation/rnn/model.rnn',
+    default='./result/experimentation/rnn/model_light.rnn',
     help="Model file store path",
     metavar="MODEL")
 
@@ -35,7 +36,7 @@ parser.add_argument(
     "--len",
     "--trajectory_length",
     dest="trajectory_length",
-    default=4,
+    default=5,
     help="Minimum Length of trajectory",
     metavar="MIN_LEN")
 
@@ -66,6 +67,7 @@ trajectories_map = \
                               min_sequence_length=trajectory_length,
                               max_test_data_length=(len(trajectories_map) if num_samples == 0 else num_samples))
 print('num of trajectories =', len(trajectories_map))
+print('trajectories_map', trajectories_map)
 
 trajectories, next_gates, gates_index, gates = rnn.process_data_set(trajectories_map, trajectory_length)
 
@@ -111,3 +113,25 @@ for temperature in [0.2, 0.5, 1.0]:
     sys.stdout.write(str(generated_trajectory))
     print()
 print()
+
+print("Start calculating score for each sample")
+scores_dict = rnn.calculate_scores_dict(trajectories_map, model, gates_index, gates, trajectory_length)
+
+print('Saving scores dictionary')
+
+EXP_PATH = './result/experimentation/rnn/'
+
+with open(EXP_PATH + 'scores.json', 'w') as outfile:
+    json.dump(scores_dict, outfile)
+
+print("Start statistics calculation")
+mean, variance, std, total = rnn.calculate_save_statistics(scores_dict, EXP_PATH + 'statistics.json')
+print("Total:", total, ", Mean:", mean, ", Variance", variance, "Standard Derivation:", std)
+
+anomalous = dict(
+    (key, value) for key, value in scores_dict.items() if value < mean and (abs(abs(value) - abs(mean)) > std))
+print(anomalous)
+print("Anomalous lenght:", len(anomalous))
+print("Saving anomalous sequences")
+with open(EXP_PATH + 'anomalous.json', 'w') as outfile:
+    json.dump(anomalous, outfile)
