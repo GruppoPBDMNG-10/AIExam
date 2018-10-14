@@ -1,7 +1,7 @@
 import sys
 import random
-import common.common as common
-import rnn.rnn as rnn
+import experimentation.common.common as common
+import experimentation.RNN.rnn as rnn
 import numpy as np
 from argparse import ArgumentParser
 
@@ -43,7 +43,7 @@ parser.add_argument(
     "-e",
     "--epochs",
     dest="epochs",
-    default=100,
+    default=80,
     help="Epoch for each iteration",
     metavar="EPOCHS")
 

@@ -1,7 +1,7 @@
 import sys
 import random
-import common.common as common
-import rnn
+import experimentation.common as common
+import experimentation.RNN.rnn as rnn
 import numpy as np
 from argparse import ArgumentParser
 
