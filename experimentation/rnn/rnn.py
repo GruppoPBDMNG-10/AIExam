@@ -2,6 +2,8 @@ import numpy as np
 import tensorflow as tf
 import itertools
 import json
+import math
+import matplotlib.pyplot as plt
 
 
 def retrieve_test_samples(data_set: dict,
@@ -55,7 +57,8 @@ def one_hot_encoding(samples: list, classifications: list, labels_index: dict, l
     return x, y
 
 
-def build_model(x: list, y: list, fold: int=1, epochs: int=1) -> tf.keras.models.Sequential:
+def build_model(x: list, y: list, fold: int=1, epochs: int=1, csv_logger: tf.keras.callbacks.CSVLogger=object)\
+        -> (tf.keras.models.Sequential, object):
     for e in range(0, fold):
         num_samples_fold = len(x) // fold
         tf.logging.set_verbosity(tf.logging.INFO)
@@ -66,11 +69,13 @@ def build_model(x: list, y: list, fold: int=1, epochs: int=1) -> tf.keras.models
         rnn.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
         rnn.summary()
 
-        rnn.fit(x[num_samples_fold*e:], y[num_samples_fold*e:],
+        history = rnn.fit(x[num_samples_fold*e:], y[num_samples_fold*e:],
                 batch_size=512,
                 epochs=epochs,
-                validation_data=(x[:num_samples_fold*(fold-e)], y[:num_samples_fold*(fold-e)]))
-        return rnn
+                validation_data=(x[:num_samples_fold*(fold-e)], y[:num_samples_fold*(fold-e)]),
+                callbacks=[csv_logger])
+
+        return rnn, history
 
 
 def sample(predictions, temp=1.0):
@@ -92,15 +97,19 @@ def calculate_scores_dict(trajectories_map: dict, model: tf.keras.models.Sequent
     result = dict()
     for key, value in trajectories_map.items():
         num_followers = len(value) - length
-        sequence_probability_gap = 0
-        for i in range(0, num_followers):
-            samples = []
-            classification = []
-            samples.append(value[i: i + length])
-            classification.append(value[i + length])
-            items = one_hot_encoding(samples, classification, gates_index, gates)
-            sequence_probability_gap += probability_gap((model.predict(items[0], verbose=0)[0]), gates_index[value[i + length]])
-            result[key] = (1 - (sequence_probability_gap / num_followers))
+        # sequence_probability = 0
+        sequence_probability = 1
+        if num_followers > 0:
+            for i in range(0, num_followers):
+                samples = []
+                classification = []
+                samples.append(value[i: i + length])
+                classification.append(value[i + length])
+                items = one_hot_encoding(samples, classification, gates_index, gates)
+                # sequence_probability += probability_gap((model.predict(items[0], verbose=0)[0]), gates_index[value[i + length]])
+                sequence_probability *= model.predict(items[0], verbose=0)[0][gates_index[value[i + length]]]
+                # result[key] = (1 - (sequence_probability / num_followers))
+            result[key] = (math.log(sequence_probability) / num_followers)
     return result
 
 

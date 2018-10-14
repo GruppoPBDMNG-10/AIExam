@@ -1,8 +1,9 @@
 import sys
 import random
 import experimentation.common.common as common
-import experimentation.RNN.rnn as rnn
+import experimentation.rnn.rnn as rnn
 import numpy as np
+import tensorflow as tf
 from argparse import ArgumentParser
 import json
 
@@ -12,7 +13,7 @@ parser.add_argument(
     "-d",
     "--data-set",
     dest="data_set",
-    default='./result/taxi_rome_gate_light.csv',
+    default='./result/taxi_rome_gate.csv',
     help="data-set file path",
     metavar="DATA-SET")
 
@@ -33,10 +34,18 @@ parser.add_argument(
     metavar="MODEL")
 
 parser.add_argument(
+    "-bm",
+    "--build-model",
+    dest="build_model",
+    default=True,
+    help="Build model",
+    metavar="BUILD_MODEL")
+
+parser.add_argument(
     "--len",
     "--trajectory_length",
     dest="trajectory_length",
-    default=5,
+    default=4,
     help="Minimum Length of trajectory",
     metavar="MIN_LEN")
 
@@ -56,6 +65,7 @@ model_file_path = args.__dict__['model']
 num_samples = args.__dict__['samples']
 trajectory_length = args.__dict__['trajectory_length']
 epochs = args.__dict__['epochs']
+build_model = args.__dict__['build_model']
 
 trajectories_map = common.__load_df(data_set_file_path)
 
@@ -71,50 +81,53 @@ print('trajectories_map', trajectories_map)
 
 trajectories, next_gates, gates_index, gates = rnn.process_data_set(trajectories_map, trajectory_length)
 
-# Next, one-hot encode the characters into binary arrays.
-print('Vectorization...')
-x, y = rnn.one_hot_encoding(trajectories, next_gates, gates_index, gates)
+if build_model:
+    # Next, one-hot encode the characters into binary arrays.
+    print('Vectorization...')
+    x, y = rnn.one_hot_encoding(trajectories, next_gates, gates_index, gates)
 
-print('Building the model...')
-model = rnn.build_model(x, y, epochs=epochs)
-model.save(model_file_path)
+    print('Building the model...')
+    logger = tf.keras.callbacks.CSVLogger(model_file_path+'.csv')
+    model = rnn.build_model(x, y, epochs=epochs, csv_logger=logger)
+    model.save(model_file_path)
 
-# Select a random trajectory
-i = random.randint(0, len(trajectories))
-generated_trajectory = trajectories[i][0:trajectory_length]
+    # Select a random trajectory
+    i = random.randint(0, len(trajectories))
+    generated_trajectory = trajectories[i][0:trajectory_length]
 
-print('--- Generating with seed:"', str(generated_trajectory))
+    print('--- Generating with seed:"', str(generated_trajectory))
 
-for temperature in [0.2, 0.5, 1.0]:
-    print('------ temperature:', temperature)
-    sys.stdout.write('SEED: ')
-    sys.stdout.write(str(generated_trajectory))
+    for temperature in [0.2, 0.5, 1.0]:
+        print('------ temperature:', temperature)
+        sys.stdout.write('SEED: ')
+        sys.stdout.write(str(generated_trajectory))
+        print()
+        sys.stdout.write('PREDICTION: ')
+
+        # We generate 4 gates
+        for i in range(4):
+            sampled = np.zeros((1, trajectory_length, len(gates)))
+            for t, gate in enumerate(generated_trajectory):
+                sampled[0, t, gates_index[gate]] = 1.
+
+            predict = model.predict(sampled, verbose=0)[0]
+            next_index = rnn.sample(predict, temperature)
+            next_gate = gates[next_index]
+
+            generated_trajectory.append(next_gate)
+            generated_trajectory = generated_trajectory[1:]
+
+            sys.stdout.write(str(next_gate))
+            sys.stdout.write(', ')
+            sys.stdout.flush()
+        print()
+        sys.stdout.write('FINAL: ')
+        sys.stdout.write(str(generated_trajectory))
+        print()
     print()
-    sys.stdout.write('PREDICTION: ')
-
-    # We generate 4 gates
-    for i in range(4):
-        sampled = np.zeros((1, trajectory_length, len(gates)))
-        for t, gate in enumerate(generated_trajectory):
-            sampled[0, t, gates_index[gate]] = 1.
-
-        predict = model.predict(sampled, verbose=0)[0]
-        next_index = rnn.sample(predict, temperature)
-        next_gate = gates[next_index]
-
-        generated_trajectory.append(next_gate)
-        generated_trajectory = generated_trajectory[1:]
-
-        sys.stdout.write(str(next_gate))
-        sys.stdout.write(', ')
-        sys.stdout.flush()
-    print()
-    sys.stdout.write('FINAL: ')
-    sys.stdout.write(str(generated_trajectory))
-    print()
-print()
 
 print("Start calculating score for each sample")
+model = tf.keras.models.load_model(model_file_path)
 scores_dict = rnn.calculate_scores_dict(trajectories_map, model, gates_index, gates, trajectory_length)
 
 print('Saving scores dictionary')

@@ -1,8 +1,9 @@
 import sys
 import random
 import experimentation.common.common as common
-import experimentation.RNN.rnn as rnn
+import experimentation.rnn.rnn as rnn
 import numpy as np
+import tensorflow as tf
 from argparse import ArgumentParser
 import json
 
