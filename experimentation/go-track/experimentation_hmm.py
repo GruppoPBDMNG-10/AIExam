@@ -4,7 +4,7 @@ import json
 
 
 RESULT_PATH = 'result/'
-EXP_PATH = RESULT_PATH + 'experimentation/hmm/'
+EXP_PATH = RESULT_PATH + 'experimentation/hmm_499/'
 MODEL_PATH = EXP_PATH + 'model_hmm.pkl'
 DATASET_PATH = RESULT_PATH + 'go_track_trackpoints_gate.csv'
 MODE = ''
@@ -26,7 +26,7 @@ if hmm_model_file.is_file() & hmm_model_file.exists():
     model = hmm.load_dump(MODEL_PATH)
 else:
     print('Creating model from scratch')
-    model = hmm.build_model(test_data)
+    model = hmm.build_model(test_data, components=len(gates))
     print("Model created:", model)
     hmm.dump(model, MODEL_PATH)
 

@@ -1,9 +1,10 @@
 from experimentation.hmm import hmm
 from pathlib import Path
 import json
+import numpy as np
 
 RESULT_PATH = 'result/'
-EXP_PATH = RESULT_PATH + 'experimentation/hmm/'
+EXP_PATH = RESULT_PATH + 'experimentation/hmm_500/'
 MODEL_PATH = EXP_PATH + 'model_hmm.pkl'
 DATASET_PATH = RESULT_PATH + 'taxi_rome_gate.csv'
 MODE = ''
@@ -13,10 +14,13 @@ MAX_TEST_LENGTH = -1
 dataset, gates = hmm.prepare_dataset_rapresentation(DATASET_PATH)
 hmm_model_file = Path(MODEL_PATH)
 
-print("Dataset loading completed")
+print("Num of gates:", len(gates))
 
-test_data = hmm.retrieve_test_samples(dataset, min_sequence_length=5, max_sequence_length=150,
-                                  max_test_data_length=MAX_TEST_LENGTH)
+print("Dataset loading completed")
+seq_mean_length = np.mean([len(sequence) for sequence in dataset.values()])
+print("Dataset seq mean length:", seq_mean_length)
+
+test_data = hmm.retrieve_test_samples(dataset, max_test_data_length=MAX_TEST_LENGTH)
 
 model = None
 
@@ -25,7 +29,7 @@ if hmm_model_file.is_file() & hmm_model_file.exists():
     model = hmm.load_dump(MODEL_PATH)
 else:
     print('Creating model from scratch')
-    model = hmm.build_model(test_data)
+    model = hmm.build_model(test_data, components=len(gates))
     print("Model created:", model)
     hmm.dump(model, MODEL_PATH)
 

@@ -3,11 +3,12 @@ from pathlib import Path
 import json
 
 RESULT_PATH = 'result/'
-EXP_PATH = RESULT_PATH + 'experimentation/hmm/'
+EXP_PATH = RESULT_PATH + 'experimentation/hmm_175/'
 MODEL_PATH = EXP_PATH + 'model_hmm.pkl'
 DATASET_PATH = RESULT_PATH + 'trap_gate.csv'
 MODE = ''
 #MAX_TEST_LENGTH = 350228
+#MAX_TEST_LENGTH = 10000
 MAX_TEST_LENGTH = 175114
 
 dataset, gates = hmm.prepare_dataset_rapresentation(DATASET_PATH)
