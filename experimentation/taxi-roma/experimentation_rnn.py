@@ -29,7 +29,7 @@ parser.add_argument(
     "-m",
     "--model",
     dest="model",
-    default='./result/experimentation/rnn/model_light.rnn',
+    default='./result/experimentation/rnn/model_rnn_rome.rnn',
     help="Model file store path",
     metavar="MODEL")
 
@@ -37,7 +37,7 @@ parser.add_argument(
     "-bm",
     "--build-model",
     dest="build_model",
-    default=True,
+    default=False,
     help="Build model",
     metavar="BUILD_MODEL")
 
@@ -45,7 +45,7 @@ parser.add_argument(
     "--len",
     "--trajectory_length",
     dest="trajectory_length",
-    default=4,
+    default=5,
     help="Minimum Length of trajectory",
     metavar="MIN_LEN")
 

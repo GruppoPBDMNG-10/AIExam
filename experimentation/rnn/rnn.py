@@ -4,6 +4,9 @@ import itertools
 import json
 import math
 import matplotlib.pyplot as plt
+import sys
+from numba import vectorize, float64
+from decimal import Decimal
 
 
 def retrieve_test_samples(data_set: dict,
@@ -98,18 +101,19 @@ def calculate_scores_dict(trajectories_map: dict, model: tf.keras.models.Sequent
     for key, value in trajectories_map.items():
         num_followers = len(value) - length
         # sequence_probability = 0
-        sequence_probability = 1
+        sequence_probability = Decimal(1)
+        probs = None
+        max_value = 0
         if num_followers > 0:
             for i in range(0, num_followers):
-                samples = []
-                classification = []
-                samples.append(value[i: i + length])
-                classification.append(value[i + length])
+                samples = value[i: i + length]
+                classification = value[i + length]
                 items = one_hot_encoding(samples, classification, gates_index, gates)
+                probs = __scale_prob(model.predict(items[0], verbose=0)[0])
                 # sequence_probability += probability_gap((model.predict(items[0], verbose=0)[0]), gates_index[value[i + length]])
-                sequence_probability *= model.predict(items[0], verbose=0)[0][gates_index[value[i + length]]]
+                sequence_probability *= Decimal(probs[gates_index[value[i + length]]])
                 # result[key] = (1 - (sequence_probability / num_followers))
-            result[key] = (math.log(sequence_probability) / num_followers)
+            result[key] = (sequence_probability.ln() / num_followers)
     return result
 
 
@@ -125,3 +129,7 @@ def calculate_save_statistics(scores_dict=dict, out_file=str):
 
     return mean, variance, std, total
 
+
+@vectorize([float64(float64)], target='cpu')
+def __scale_prob(x):
+    return x + sys.float_info.min

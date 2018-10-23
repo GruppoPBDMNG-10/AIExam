@@ -14,7 +14,7 @@ parser.add_argument(
     "-d",
     "--data-set",
     dest="data_set",
-    default='./result/taxi_rome_gate_light.csv',
+    default='./result/taxi_rome_gate.csv',
     help="data-set file path",
     metavar="DATA-SET")
 
@@ -22,7 +22,7 @@ parser.add_argument(
     "-s",
     "--samples",
     dest="samples",
-    default=0,
+    default=7000,
     help="Number of samples to use",
     metavar="SAMPLES")
 
@@ -30,7 +30,7 @@ parser.add_argument(
     "-m",
     "--model",
     dest="model",
-    default='./result/experimentation/rnn/model_light.rnn',
+    default='./result/experimentation/rnn/model_ev.rnn',
     help="Model file store path",
     metavar="MODEL")
 
@@ -77,7 +77,7 @@ dict_color[3] = 'r'
 dict_color[4] = 'b'
 dict_color[5] = 'y'
 
-for i, epochs in enumerate([2, 3]):
+for i, epochs in enumerate([100, 150, 200]):
     plt.figure(1)
     plt.subplot(211)
     plt.title('Training')
