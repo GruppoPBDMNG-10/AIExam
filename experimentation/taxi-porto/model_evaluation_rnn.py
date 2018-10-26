@@ -22,7 +22,7 @@ parser.add_argument(
     "-s",
     "--samples",
     dest="samples",
-    default=7000,
+    default=0,
     help="Number of samples to use",
     metavar="SAMPLES")
 
@@ -30,7 +30,7 @@ parser.add_argument(
     "-m",
     "--model",
     dest="model",
-    default='./result/experimentation/rnn/model_ev.rnn',
+    default='./result/experimentation/rnn/model_ev_neurons5_ep200.rnn',
     help="Model file store path",
     metavar="MODEL")
 
@@ -38,7 +38,7 @@ parser.add_argument(
     "-bm",
     "--build-model",
     dest="build_model",
-    default=True,
+    default=False,
     help="Build model",
     metavar="BUILD_MODEL")
 
@@ -46,7 +46,7 @@ parser.add_argument(
     "--len",
     "--trajectory_length",
     dest="trajectory_length",
-    default=4,
+    default=5,
     help="Minimum Length of trajectory",
     metavar="MIN_LEN")
 
